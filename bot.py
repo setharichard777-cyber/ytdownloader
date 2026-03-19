@@ -59,6 +59,7 @@ def fetch_info(url):
 
 # ================= DOWNLOAD =================
 def download_mp3(url, info):
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     title = safe_filename(info["title"])
     path = DOWNLOAD_DIR / f"{title}.mp3"
     opts = {
@@ -77,6 +78,7 @@ def download_mp3(url, info):
     return path
 
 def download_video(url, quality, info):
+    DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     title = safe_filename(info["title"])
     path = DOWNLOAD_DIR / f"{title}.mp4"
     fmt = "bestvideo+bestaudio/best" if quality == "best" else f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]"
