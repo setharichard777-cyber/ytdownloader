@@ -10,7 +10,7 @@ from telegram.ext import (
     Application,
     MessageHandler,
     CallbackQueryHandler,
-    CommandHandler,          # ← NEW
+    CommandHandler,
     ContextTypes,
     filters,
 )
@@ -18,7 +18,10 @@ from telegram.ext import (
 import yt_dlp
 
 # ====================== CONFIG ======================
-TOKEN = os.getenv("TOKEN") 
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise ValueError("❌ TOKEN environment variable is not set!")
+
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
@@ -40,15 +43,30 @@ def safe_filename(name):
     return name[:70]
 
 def ydl_base():
-    return {
+    base = {
         "quiet": True,
         "noplaylist": True,
         "concurrent_fragment_downloads": 32,
-        "extractor_args": {"youtube": {"player_client": ["ios", "android", "web"]}},
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["ios", "android", "web", "web_embedded_player"],
+                "lang": "en"
+            }
+        },
         "http_chunk_size": 10485760,
         "retries": 20,
         "fragment_retries": 20,
     }
+
+    # Add cookies if available (very important for bypassing "Sign in to confirm" on cloud IPs)
+    cookies_path = os.getenv("COOKIES_PATH", "/app/cookies.txt")
+    if Path(cookies_path).exists():
+        base["cookiefile"] = cookies_path
+        log.info(f"Using cookies from: {cookies_path}")
+    else:
+        log.warning("No cookies file found → may hit 'Sign in to confirm you’re not a bot' error")
+
+    return base
 
 def fetch_info(url):
     with yt_dlp.YoutubeDL(ydl_base()) as ydl:
@@ -116,8 +134,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start — Show this welcome message\n"
         "/help  — Full instructions\n"
         "/ping  — Test if bot is alive\n\n"
-        "Just paste a YouTube link and enjoy lightning speed! ⚡\n\n"
-        "<i>Note: aria2c must be installed for max speed.</i>",
+        "Just paste a YouTube link and enjoy! ⚡\n\n"
+        "<i>Note: Uses cookies to bypass YouTube restrictions on cloud servers.</i>",
         parse_mode="HTML"
     )
 
@@ -134,15 +152,15 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Works with Shorts & normal videos\n"
         "• No ads, no limits on number of downloads\n"
         "• Telegram 50 MB limit (long videos = use 360p or MP3)\n"
-        "• Auto cleanup (no storage used)\n\n"
-        "⚡ Speed tip: Run this bot on a VPS for 1–3 second downloads!\n\n"
+        "• Auto cleanup\n\n"
+        "⚡ Speed tip: cookies help a lot on Railway / VPS\n\n"
         "Need help? Just send a link or type /start",
         parse_mode="HTML"
     )
 
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏓 Pong! Bot is alive and ready to download at max speed ⚡")
+    await update.message.reply_text("🏓 Pong! Bot is alive and ready ⚡")
 
 
 # ====================== MAIN HANDLERS ======================
@@ -156,7 +174,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("🔍 Fetching video info...")
 
     loop = asyncio.get_running_loop()
-    info = await loop.run_in_executor(None, fetch_info, url)
+    try:
+        info = await loop.run_in_executor(None, fetch_info, url)
+    except Exception as e:
+        await msg.edit_text(f"❌ Could not fetch info:\n{str(e)[:200]}\n\nTry again or use a different video.")
+        return
 
     title = info.get("title", "Unknown")
     duration = info.get("duration", 0)
@@ -216,14 +238,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         log.error(e)
-        await query.edit_message_text(f"❌ Failed: {str(e)[:150]}")
+        await query.edit_message_text(f"❌ Failed: {str(e)[:180]}")
     finally:
         if file and file.exists():
             try:
                 file.unlink()
             except:
                 pass
-        # Clean session
         context.user_data.clear()
 
 
@@ -243,16 +264,15 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("ping", ping_command))
 
-    # YouTube link handler
+    # Message & Callback
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    # Button handler
     app.add_handler(CallbackQueryHandler(handle_callback))
 
-    print("✅ COMPLETE BOT STARTED!")
-    print("   • /start → Welcome & instructions")
-    print("   • Send YouTube link → download menu")
-    print("   • Download time shown every time")
+    log.info("✅ COMPLETE BOT STARTED!")
+    log.info("   • /start → Welcome & instructions")
+    log.info("   • Send YouTube link → download menu")
+    log.info("   • Using cookies: " + ("YES" if Path(os.getenv("COOKIES_PATH", "/app/cookies.txt")).exists() else "NO"))
+
     app.run_polling()
 
 
