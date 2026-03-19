@@ -51,15 +51,14 @@ def ydl_base():
     return {
         "quiet": True,
         "noplaylist": True,
-        "retries": 20,
-        "fragment_retries": 20,
-        "concurrent_fragment_downloads": 32,
-        "socket_timeout": 60,
+        "retries": 10,
+        "fragment_retries": 10,
         "nocheckcertificate": True,
-        "http_chunk_size": 10485760,
+        "socket_timeout": 60,
         "extractor_args": {
             "youtube": {
-                "player_client": ["android", "ios", "web"]
+                "player_client": ["android"],
+                "skip": ["dash", "hls"]
             }
         },
     }
@@ -243,8 +242,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(f"Done in {t} seconds")
 
     except Exception as e:
-
-        log.error(e)
+    log.exception("yt-dlp error")
         await query.edit_message_text(f"Failed: {str(e)[:120]}")
 
     finally:
