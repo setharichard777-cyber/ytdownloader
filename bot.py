@@ -17,9 +17,8 @@ from telegram.ext import (
 import yt_dlp
 
 
-# TOKEN = os.getenv("8550044814:AAEZmxohzd5xaYmbCpxy9XrGthrLpNVRH7s")
+TOKEN = os.getenv("8550044814:AAEZmxohzd5xaYmbCpxy9XrGthrLpNVRH7s")
 
-TOKEN = "8550044814:AAEZmxohzd5xaYmbCpxy9XrGthrLpNVRH7s"
 DOWNLOAD_DIR = Path("downloads")
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
