@@ -1,2 +1,2 @@
 [phases.setup]
-nixPkgs = ["ffmpeg", "aria2", "ca-certificates"]
+nixPkgs = ["ffmpeg", "aria2"]
