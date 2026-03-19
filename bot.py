@@ -49,8 +49,7 @@ def ydl_base():
         "concurrent_fragment_downloads": 32,
         "extractor_args": {
             "youtube": {
-                "player_client": ["ios", "android", "web", "web_embedded_player"],
-                "lang": "en"
+                "player_client": ["ios", "android", "web", "web_embedded_player"]
             }
         },
         "http_chunk_size": 10485760,
@@ -58,7 +57,6 @@ def ydl_base():
         "fragment_retries": 20,
     }
 
-    # Add cookies if available (very important for bypassing "Sign in to confirm" on cloud IPs)
     cookies_path = os.getenv("COOKIES_PATH", "/app/cookies.txt")
     if Path(cookies_path).exists():
         base["cookiefile"] = cookies_path
