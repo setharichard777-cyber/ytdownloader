@@ -45,12 +45,10 @@ def safe_filename(name):
 def ydl_base():
     return {
         "quiet": True,
-        "noplaylist": True,
-        "retries": 10,
-        "fragment_retries": 10,
         "nocheckcertificate": True,
+        "cookiefile": "cookies.txt",
         "socket_timeout": 60,
-        "extractor_args": {"youtube": {"player_client": ["android"]}},
+        "noplaylist": True,
     }
 
 def fetch_info(url):
