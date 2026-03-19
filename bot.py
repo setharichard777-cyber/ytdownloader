@@ -17,8 +17,7 @@ from telegram.ext import (
 
 import yt_dlp
 
-# ====================== CONFIG ======================
-
+# ================= CONFIG =================
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
     raise ValueError("TOKEN environment variable not set")
@@ -29,14 +28,12 @@ DOWNLOAD_DIR.mkdir(exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-# ====================== REGEX ======================
-
+# ================= REGEX =================
 YOUTUBE_RE = re.compile(
     r"(?:https?://)?(?:www\.)?(?:youtube\.com/(?:watch\?v=|shorts/)|youtu\.be/)[\w-]+(?:[^\s]*)?"
 )
 
-# ====================== HELPERS ======================
-
+# ================= HELPERS =================
 def extract_url(text: str):
     match = YOUTUBE_RE.search(text.strip())
     return match.group(0) if match else None
@@ -60,19 +57,14 @@ def fetch_info(url):
     with yt_dlp.YoutubeDL(ydl_base()) as ydl:
         return ydl.extract_info(url, download=False)
 
-ARIA2_ARGS = "-x 32 -s 32 -k 10M --file-allocation=none --summary-interval=0 --max-connection-per-server=32"
-
-# ====================== DOWNLOAD ======================
-
+# ================= DOWNLOAD =================
 def download_mp3(url, info):
     title = safe_filename(info["title"])
-    path = DOWNLOAD_DIR / f"{title}.%(ext)s"
+    path = DOWNLOAD_DIR / f"{title}.mp3"
     opts = {
         **ydl_base(),
         "format": "bestaudio/best",
         "outtmpl": str(path),
-        "external_downloader": "aria2c",
-        "external_downloader_args": {"aria2c": ARIA2_ARGS},
         "postprocessors": [
             {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"},
             {"key": "FFmpegMetadata"},
@@ -82,26 +74,23 @@ def download_mp3(url, info):
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
-    return DOWNLOAD_DIR / f"{title}.mp3"
+    return path
 
 def download_video(url, quality, info):
     title = safe_filename(info["title"])
-    path = DOWNLOAD_DIR / f"{title}.%(ext)s"
+    path = DOWNLOAD_DIR / f"{title}.mp4"
     fmt = "bestvideo+bestaudio/best" if quality == "best" else f"bestvideo[height<={quality}]+bestaudio/best[height<={quality}]"
     opts = {
         **ydl_base(),
         "format": fmt,
         "outtmpl": str(path),
-        "external_downloader": "aria2c",
-        "external_downloader_args": {"aria2c": ARIA2_ARGS},
         "merge_output_format": "mp4",
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
-    return DOWNLOAD_DIR / f"{title}.mp4"
+    return path
 
-# ====================== COMMANDS ======================
-
+# ================= COMMANDS =================
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Send a YouTube link.\nChoose MP3 or video quality.\nFast download enabled."
@@ -118,8 +107,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🏓 Pong! Bot is alive.")
 
-# ====================== MESSAGE HANDLER ======================
-
+# ================= MESSAGE HANDLER =================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = extract_url(update.message.text)
     if not url:
@@ -160,8 +148,7 @@ Choose format:
 
     await msg.edit_text(caption, reply_markup=keyboard)
 
-# ====================== CALLBACK HANDLER ======================
-
+# ================= CALLBACK HANDLER =================
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -203,8 +190,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
         context.user_data.clear()
 
-# ====================== MAIN ======================
-
+# ================= MAIN =================
 def main():
     app = (
         Application.builder()
@@ -215,12 +201,10 @@ def main():
         .build()
     )
 
-    # Commands
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("ping", ping_command))
 
-    # Message & callback
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(handle_callback))
 
