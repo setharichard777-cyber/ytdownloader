@@ -1,2 +1,3 @@
-[phases.setup]
-aptPkgs = ["aria2", "ffmpeg"]
+ffmpeg
+aria2
+ca-certificates
